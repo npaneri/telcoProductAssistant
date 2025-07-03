@@ -1,7 +1,7 @@
 # demo_st.py
 import streamlit as st
 import pandas as pd
-from telecom_product_crew import run_telecom_product_crew  # Your business logic module
+from telecom_product_crew import run_telecom_product_crew
 
 st.set_page_config(page_title="📡 Telecom Product Designer", layout="wide")
 
@@ -15,30 +15,40 @@ st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Tele
 st.sidebar.markdown("## 📞 Telecom Design Assistant")
 st.sidebar.markdown("Use this app to validate telecom ideas, analyze the market, and get GenAI-driven product suggestions.")
 
-# --- User Authentication ---
-st.title("📡 Telecom Product Design Assistant")
-with st.form(key="auth_form"):
-    name = st.text_input("👤 Your Name")
-    email = st.text_input("📧 Your Email")
-    submitted = st.form_submit_button("🔓 Submit")
+# --- User Authentication State Check ---
+user_verified = st.session_state.get("user_verified", False)
+max_queries = st.session_state.get("max_queries", 0)
 
-user_verified = False
-max_queries = 0
-if submitted:
-    try:
-        share_df = pd.read_csv(SHARE_FILE)
-        match = share_df[share_df['email'].str.lower() == email.strip().lower()]
-        if not match.empty:
-            user_verified = True
-            max_queries = int(match.iloc[0]['max queries'])
-            st.success(f"Welcome {name}!This demo permits you with {max_queries} queries.")
-        else:
-            st.error("❌ You are not authorized to access this demo. Please contact the demo provider.")
-    except Exception as e:
-        st.error(f"Error loading access list: {e}")
+if not user_verified:
+    st.title("📡 Telecom Product Design Assistant")
+    with st.form(key="auth_form"):
+        name = st.text_input("👤 Your Name")
+        email = st.text_input("📧 Your Email")
+        submitted = st.form_submit_button("🔓 Submit")
+
+    if submitted:
+        try:
+            share_df = pd.read_csv(SHARE_FILE)
+            match = share_df[share_df['email'].str.lower() == email.strip().lower()]
+            if not match.empty:
+                st.session_state.user_verified = True
+                st.session_state.user_name = name
+                st.session_state.user_email = email
+                st.session_state.max_queries = int(match.iloc[0]['max queries'])
+                st.success(f"Welcome {name}! This demo permits you with {st.session_state.max_queries} queries.")
+                st.experimental_rerun()
+            else:
+                st.error("❌ You are not authorized to access this demo. Please contact the demo provider.")
+        except Exception as e:
+            st.error(f"Error loading access list: {e}")
 
 # --- Prompt UI only if verified ---
-if user_verified:
+if st.session_state.get("user_verified", False):
+    max_queries = st.session_state.get("max_queries", 0)
+    user_name = st.session_state.get("user_name", "")
+    st.title(f"📡 Welcome {user_name}!")
+    st.markdown(f"You have used {st.session_state.query_count} out of {max_queries} allowed queries.")
+
     st.markdown("""
     Enter your **telecom product prompt** below. The system will validate it, analyze market data, and propose a concise product recommendation.
 
